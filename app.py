@@ -10,6 +10,10 @@ from llama_index.vector_stores.chroma import ChromaVectorStore
 
 st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def save_uploaded_file(uploaded_file):
