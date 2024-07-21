@@ -20,6 +20,11 @@ embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
 Settings.llm = llm 
 Settings.embed_model = embed_model
 
+os.environ["NLTK_DATA"] = "./nltk_cache"
+cache_dir = "./nltk_cache/corpora"
+if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+
 
 @st.cache_resource(show_spinner=False)
 def load_data():
