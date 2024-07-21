@@ -1,9 +1,18 @@
 import streamlit as st
-from llama_index.core.tools import FunctionTool
+import chromadb
+import os
+from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.legacy.embeddings import HuggingFaceEmbedding
-from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
+from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader, StorageContext
+from llama_index.vector_stores.chroma import ChromaVectorStore
+
+st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
+
+def save_uploaded_file(uploaded_file):
+    with open(os.path.join('./data', uploaded_file.name), "wb") as f:
+        f.write(uploaded_file.getbuffer())
 
 llm = Ollama(model="llama3", request_timeout=3600)
 embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
@@ -11,36 +20,57 @@ embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
 Settings.llm = llm 
 Settings.embed_model = embed_model
 
+db = chromadb.PersistentClient(path="./chroma_db")
+chroma_collection = db.get_or_create_collection("pluto")
+vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
 @st.cache_resource(show_spinner=False)
 def load_data():
-    with st.spinner(text="Please wait while I load and index the documents..."):
+    with st.spinner(text="Loading and indexing documents..."):
         reader = SimpleDirectoryReader("./data", recursive=True)
         documents = reader.load_data()
-        index = VectorStoreIndex.from_documents(documents, service_context=Settings)
+        index = VectorStoreIndex.from_documents(documents, service_context=Settings, storage_context=storage_context)
         return index
 index = load_data()
-chat_engine = index.as_chat_engine(chat_mode="context", verbose=True)
+query_engine = index.as_query_engine()
+query_tool = QueryEngineTool.from_defaults(
+    query_engine,
+    name="pluto_rag",
+    description="This is a RAG engine that generates responses based on the PDF data, if it exists in the database.",
+)
 
-# def valuation(patent_value: int, risk: int) -> int:
-#     return patent_value - risk
-# valuation_tool = FunctionTool.from_defaults(fn=valuation)
-# valuation_agent = ReActAgent.from_tools(
-#     [valuation_tool],
-#     llm=llm,
-#     verbose=True,
-# )
-# def get_valuation_response():
-#     response = valuation_agent.chat("What is the value given a patent value of 10 and a risk of 5?")
-#     return response
+def compute_valuation(discounted_cash_flow: int, patent_value: int, risk: int) -> int:
+    return discounted_cash_flow + patent_value - risk
+compute_valuation_tool = FunctionTool.from_defaults(fn=compute_valuation)
+
+
+agent = ReActAgent.from_tools(
+    [query_tool, compute_valuation_tool], llm=llm, verbose=True
+)
+
+uploaded_files = st.file_uploader(
+    label="Upload files to the data directory.",
+    accept_multiple_files=True,
+    key="file_uploader",
+    help="You can upload multiple files.",
+    on_change=None,
+    disabled=False,
+    label_visibility="visible"
+)
+
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        save_uploaded_file(uploaded_file)
+        st.success(f"File {uploaded_file.name} uploaded successfully!")
 
 def main():
-    st.title("Valuation Agent")
+    st.logo('images/pluto.png', link="https://github.com/mathenaangeles/Pluto", icon_image='images/pluto_icon.png')
+    st.title(":robot_face: Valuation Agent")
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [
-            {"role": "assistant", "content": "Hello! I am a valuation agent that will assist you in creating a business valuation report. Which company would you like to generate a report for?"}
+            {"role": "assistant", "content": "Hello! I will assist you in creating a business valuation report. Which company would you like to generate a report for?"}
         ]
-    # response = get_valuation_response()
-    # st.markdown(f"<p>{response}</p>", unsafe_allow_html=True)
     if prompt := st.chat_input("Write your message here"):
         st.session_state.messages.append({"role": "user", "content": prompt})
     for message in st.session_state.messages:
@@ -48,8 +78,8 @@ def main():
             st.write(message["content"])
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
-            with st.spinner("Please wait while I think."):
-                response = chat_engine.chat(prompt)
+            with st.spinner("Thinking..."):
+                response = agent.chat(st.session_state.messages[-1]["content"])
                 st.write(response.response)
                 message = {"role": "assistant", "content": response.response}
                 st.session_state.messages.append(message)
