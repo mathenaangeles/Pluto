@@ -1,11 +1,12 @@
 import streamlit as st
+import chromadb
 import os
-import nltk
 from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.legacy.embeddings import HuggingFaceEmbedding
-from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
+from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader, StorageContext
+from llama_index.vector_stores.chroma import ChromaVectorStore
 
 st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
@@ -21,21 +22,17 @@ embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
 Settings.llm = llm 
 Settings.embed_model = embed_model
 
-custom_nltk_cache = "./nltk_cache"
-os.environ["NLTK_DATA"] = custom_nltk_cache
-nltk.data.path.append(custom_nltk_cache)
-
-if not os.path.exists(custom_nltk_cache):
-    os.makedirs(custom_nltk_cache)
-if not os.path.exists(os.path.join(custom_nltk_cache, 'corpora')):
-    os.makedirs(os.path.join(custom_nltk_cache, 'corpora'))
+db = chromadb.PersistentClient(path="./chroma_db")
+chroma_collection = db.get_or_create_collection("pluto")
+vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing documents..."):
-        reader = SimpleDirectoryReader(input_dir="./data", recursive=True)
+        reader = SimpleDirectoryReader("./data", recursive=True)
         documents = reader.load_data()
-        index = VectorStoreIndex.from_documents(documents, service_context=Settings)
+        index = VectorStoreIndex.from_documents(documents, service_context=Settings, storage_context=storage_context)
         return index
 index = load_data()
 chat_engine = index.as_chat_engine(chat_mode="context", llm=llm)
