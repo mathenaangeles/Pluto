@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import nltk
 from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
@@ -20,11 +21,14 @@ embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
 Settings.llm = llm 
 Settings.embed_model = embed_model
 
-os.environ["NLTK_DATA"] = "./nltk_cache"
-cache_dir = "./nltk_cache/corpora"
-if not os.path.exists(cache_dir):
-    os.makedirs(cache_dir)
+custom_nltk_cache = "./nltk_cache"
+os.environ["NLTK_DATA"] = custom_nltk_cache
+nltk.data.path.append(custom_nltk_cache)
 
+if not os.path.exists(custom_nltk_cache):
+    os.makedirs(custom_nltk_cache)
+if not os.path.exists(os.path.join(custom_nltk_cache, 'corpora')):
+    os.makedirs(os.path.join(custom_nltk_cache, 'corpora'))
 
 @st.cache_resource(show_spinner=False)
 def load_data():
