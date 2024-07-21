@@ -35,6 +35,7 @@ def load_data():
         index = VectorStoreIndex.from_documents(documents, service_context=Settings, storage_context=storage_context)
         return index
 index = load_data()
+chat_engine = index.as_chat_engine(chat_mode="context", llm=llm)
 query_engine = index.as_query_engine()
 query_tool = QueryEngineTool.from_defaults(
     query_engine,
