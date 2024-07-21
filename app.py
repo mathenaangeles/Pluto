@@ -4,13 +4,9 @@ from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.ollama import Ollama
 from llama_index.legacy.embeddings import HuggingFaceEmbedding
-from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader, StorageContext
+from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
 
 st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
-
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -28,7 +24,7 @@ Settings.embed_model = embed_model
 @st.cache_resource(show_spinner=False)
 def load_data():
     with st.spinner(text="Loading and indexing documents..."):
-        reader = SimpleDirectoryReader("./data", recursive=True)
+        reader = SimpleDirectoryReader(input_dir="./data", recursive=True)
         documents = reader.load_data()
         index = VectorStoreIndex.from_documents(documents, service_context=Settings)
         return index
