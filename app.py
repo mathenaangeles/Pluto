@@ -10,6 +10,8 @@ from llama_index.vector_stores.chroma import ChromaVectorStore
 
 st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 def save_uploaded_file(uploaded_file):
     with open(os.path.join('./data', uploaded_file.name), "wb") as f:
         f.write(uploaded_file.getbuffer())
