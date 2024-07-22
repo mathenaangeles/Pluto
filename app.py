@@ -1,15 +1,20 @@
 import os
 import nltk
 import streamlit as st
-from llama_index.core.tools import FunctionTool,  QueryEngineTool
+from dotenv import load_dotenv
+# from llama_index.llms.ollama import Ollama
 from llama_index.core.agent import ReActAgent
-from llama_index.llms.ollama import Ollama
+from llama_index.llms.together import TogetherLLM
 from llama_index.legacy.embeddings import HuggingFaceEmbedding
+from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
 
 st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+together_api_key = os.environ.get('TOGETHER_API_KEY')
+
+load_dotenv()
 
 nltk_data_dir = "./nltk_cache"
 os.environ["NLTK_DATA"] = nltk_data_dir
@@ -24,8 +29,17 @@ def save_uploaded_file(uploaded_file):
     with open(os.path.join('./data', uploaded_file.name), "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-llm = Ollama(model="llama3", request_timeout=3600)
+# llm = Ollama(model="llama3", request_timeout=3600)
 embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
+
+try:
+    llm = TogetherLLM(
+        model="meta-llama/Meta-Llama-3-8B-Instruct-Turbo", 
+        api_key=os.getenv('TOGETHER_API_KEY')
+    )
+except Exception as e:
+    st.error(f"Failed to initialize TogetherLLM: {e}")
+    raise
 
 Settings.llm = llm 
 Settings.embed_model = embed_model
