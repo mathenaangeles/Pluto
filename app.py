@@ -1,4 +1,5 @@
 import os
+import nltk
 import streamlit as st
 from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core.agent import ReActAgent
@@ -9,6 +10,18 @@ from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
 st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+custom_nltk_cache = "./nltk_cache"
+os.environ["NLTK_DATA"] = custom_nltk_cache
+nltk.data.path.append(custom_nltk_cache)
+
+def ensure_dir_exists(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+        os.chmod(path, 0o755)
+
+ensure_dir_exists(custom_nltk_cache)
+ensure_dir_exists(os.path.join(custom_nltk_cache, 'corpora'))
 
 def save_uploaded_file(uploaded_file):
     with open(os.path.join('./data', uploaded_file.name), "wb") as f:
