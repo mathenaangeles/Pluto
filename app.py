@@ -11,13 +11,25 @@ st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initi
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-nltk_data_dir = "./nltk_cache/"
-if not os.path.exists(nltk_data_dir):
-    os.makedirs(nltk_data_dir, exist_ok=True)
-nltk.data.path.clear()
-nltk.data.path.append(nltk_data_dir)
-nltk.download("stopwords", download_dir=nltk_data_dir)
-nltk.download('punkt', download_dir=nltk_data_dir)
+custom_nltk_cache = "./nltk_cache"
+os.environ["NLTK_DATA"] = custom_nltk_cache
+nltk.data.path.append(custom_nltk_cache)
+
+def ensure_dir_exists(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+        os.chmod(path, 0o755)
+
+ensure_dir_exists(custom_nltk_cache)
+ensure_dir_exists(os.path.join(custom_nltk_cache, 'corpora'))
+
+def download_nltk_resource(resource):
+    try:
+        nltk.data.find(f'corpora/{resource}')
+    except LookupError:
+        nltk.download(resource, download_dir=custom_nltk_cache)
+
+download_nltk_resource('stopwords')
 
 def save_uploaded_file(uploaded_file):
     with open(os.path.join('./data', uploaded_file.name), "wb") as f:
