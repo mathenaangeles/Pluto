@@ -2,14 +2,13 @@ import os
 import nltk
 import streamlit as st
 from dotenv import load_dotenv
-# from llama_index.llms.ollama import Ollama
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.together import TogetherLLM
 from llama_index.legacy.embeddings import HuggingFaceEmbedding
 from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
 
-st.set_page_config(page_title='Pluto',page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
+st.set_page_config(page_title='Pluto', page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 together_api_key = os.environ.get('TOGETHER_API_KEY')
@@ -34,7 +33,7 @@ embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
 
 try:
     llm = TogetherLLM(
-        model="meta-llama/Meta-Llama-3-8B-Instruct-Turbo", 
+        model="meta-llama/Meta-Llama-3-70B-Instruct-Turbo", 
         api_key=os.getenv('TOGETHER_API_KEY')
     )
 except Exception as e:
@@ -66,7 +65,8 @@ compute_valuation_tool = FunctionTool.from_defaults(fn=compute_valuation)
 
 
 agent = ReActAgent.from_tools(
-    [query_tool, compute_valuation_tool], llm=llm, verbose=True
+    [query_tool, compute_valuation_tool], llm=llm, verbose=True,
+    max_iterations=5,
 )
 
 uploaded_files = st.file_uploader(
@@ -99,7 +99,10 @@ def main():
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                response = agent.chat(st.session_state.messages[-1]["content"])
+                try:
+                    response = agent.chat(st.session_state.messages[-1]["content"])
+                except:
+                    response = chat_engine.chat(prompt)
                 st.write(response.response)
                 message = {"role": "assistant", "content": response.response}
                 st.session_state.messages.append(message)
