@@ -85,8 +85,7 @@ def main():
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                # response = agent.chat(st.session_state.messages[-1]["content"])
-                response = chat_engine.chat(prompt)
+                response = agent.chat(st.session_state.messages[-1]["content"])
                 st.write(response.response)
                 message = {"role": "assistant", "content": response.response}
                 st.session_state.messages.append(message)
