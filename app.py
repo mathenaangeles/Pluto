@@ -24,7 +24,7 @@ def save_uploaded_file(uploaded_file):
     with open(os.path.join('./data', uploaded_file.name), "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-llm = Ollama(model="llama3", request_timeout=3600, base_url = "http://localhost:8501")
+llm = Ollama(model="llama3", request_timeout=3600, base_url = "https://pluto-agent.streamlit.app/")
 embed_model = HuggingFaceEmbedding("BAAI/bge-small-en-v1.5")
 
 Settings.llm = llm 
