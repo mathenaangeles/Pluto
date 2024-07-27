@@ -7,14 +7,6 @@ from llama_index.llms.together import TogetherLLM
 from llama_index.legacy.embeddings import HuggingFaceEmbedding
 from llama_index.core.tools import FunctionTool,  QueryEngineTool
 from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
-from formulas import (get_market_capitalization_tool, 
-                      get_diluted_market_capitalization_tool, 
-                      get_times_revenue_tool, 
-                      get_earnings_multiplier_tool, 
-                      get_discounted_cash_flow_tool,
-                      get_shareholder_equity_tool,
-                      get_book_value_per_share_tool,
-                      get_price_to_book_ratio_tool)
 
 st.set_page_config(page_title='Pluto', page_icon = 'images/pluto_icon.png', initial_sidebar_state = 'auto')
 
@@ -67,17 +59,13 @@ query_tool = QueryEngineTool.from_defaults(
     description="This is a RAG engine that generates responses based on the PDF data, if it exists in the database.",
 )
 
+def compute_valuation(discounted_cash_flow: int, patent_value: int, risk: int) -> int:
+    return discounted_cash_flow + patent_value - risk
+compute_valuation_tool = FunctionTool.from_defaults(fn=compute_valuation)
+
+
 agent = ReActAgent.from_tools(
-    [query_tool, 
-     get_market_capitalization_tool, 
-     get_diluted_market_capitalization_tool,
-     get_times_revenue_tool,
-     get_earnings_multiplier_tool,
-     get_discounted_cash_flow_tool,
-     get_shareholder_equity_tool,
-     get_book_value_per_share_tool,
-     get_price_to_book_ratio_tool
-     ], llm=llm, verbose=True,
+    [query_tool, compute_valuation_tool], llm=llm, verbose=True,
     max_iterations=5,
 )
 
